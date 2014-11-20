@@ -6,21 +6,31 @@
 # Standard Modules
 import sys
 import pandas as pd
-import datetime
-import os
 
+# eliminate annoying error message
+pd.options.mode.chained_assignment = None
 
-# Obtain excel filename
-# try:
-#     filename = sys.argv[3]
-# except:
-filename = 'C:\\Temp\\gap_test_data.xlsx'
-
-print filename
-    
-
-
-# In[10]:
+def error_message():
+    print '--->::: gap_testing.exe [input file] [output file] [minimum] [gap_adj]'
+    print '--->:::'
+    print '--->::: input file:   the filename of the excel file to be tested.'
+    print '--->:::               The file must be in the same folder as the script.'
+    print '--->:::               col(1) - Date'
+    print '--->:::               col(2) - Name'
+    print '--->:::               col(3) - Category'
+    print '--->:::               col(4) - Return Date'
+    print '--->:::               col(5-10) - Return Periods'
+    print '--->:::'
+    print '--->::: output file: the filename of the excel file to be produced. Make sure the file is not open.'
+    print '--->:::              Example: test_results.xlsx'
+    print '--->:::'
+    print '--->::: minimum:     the minimum number of funds required in a category to run the test on that category.'
+    print '--->:::              default = 6'
+    print '--->:::'
+    print '--->::: gap_adj:     the number of standard deviations consituting an investigatable gap.'
+    print '--->:::              default = 1.0'
+    print '--->:::'
+    print '--->::: Starting Analysis'
 
 def investigate(dataframe, gap, colhead):
     
@@ -45,7 +55,7 @@ def investigate(dataframe, gap, colhead):
             curr_value = value
             diff = curr_value - prev_value
 
-            if abs(diff) > gap:
+            if abs(diff) > gap * CRITICAL_SD:
 
                 investigate_list.append(index)
                 switch = True
@@ -57,130 +67,119 @@ def investigate(dataframe, gap, colhead):
 
     return investigate_list
 
+def clean(dataframe):
+    # clean the dataset
 
-# In[11]:
+    # remove all rows without an ID
+    df = dataframe[dataframe['SecId'].notnull()]
+    df['str-date'] = df['Return Date'].astype(str)
+
+    # find modal return date, remove all rows without that return date
+    mode_series = df['str-date']
+    mode_list = list(mode_series.values)
+
+    count_list = {}
+
+    for x in mode_list:
+        prev = count_list.get(x, 0) + 1
+        count_list[x] = prev
+        
+    max_val = max(count_list.values())
+
+    for k, v in count_list.iteritems():
+        if v == max_val:
+            mode = k
+            break
+
+            df = df[df['str-date'] == mode]
+            
+    del df['str-date']    
+
+    return df
+
+error = False
+
+# Obtain excel filename
+try:
+    filename = sys.argv[1]
+    # cwd = os.getcwd()
+    # filename = os.path.join(cwd, filestring)
+except:
+    error_message()
+    sys.exit()
+
+try:
+    output = sys.argv[2]
+except:
+    error_message()
+    sys.exit
+
+try:
+    MIN_FUNDS = sys.argv[3]
+except:
+    MIN_FUNDS = 6
+    error=True
+
+try:
+    CRITICAL_SD = sys.argv[4]
+except:
+    CRITICAL_SD = 1.0
+    error=True
+
+if error:
+    error_message()
 
 # open excel file and create the dataframe
 df = pd.read_excel(filename)
 
-# columns are assumed to be in this order, with these headings
-headings = {
-            'A'  :  'Name',
-            'B'  :  'SecId',
-            'C'  :  'Morningstar Category',
-            'D'  :  'Return Date (Mo-End)',
-            'E'  :  'Ret 1 Mo (Mo-End)',
-            'F'  :  'Ret 2 Mo (Mo-End)',
-            'G'  :  'Ret 3 Mo (Mo-End)',
-            'H'  :  'Ret 6 Mo (Mo-End)',
-            'I'  :  'Ret 1 Yr (Mo-End)',
-            'J'  :  'Ret Annlzd 2 Yr (Mo-End)',
-            'K'  :  'Ret Annlzd 3 Yr (Mo-End)',
-            'L'  :  'Ret Annlzd 5 Yr (Mo-End)',
-            'M'  :  'Ret Annlzd 10 Yr (Mo-End)',
-            'N'  :  'Ret Annlzd 15 Yr (Mo-End)'
-            }
-
+# columns are assumed to be in this order
 presumed_headings = [
                     'Name',
                     'SecId',
                     'Morningstar Category',
-                    'Return Date (Mo-End)',
-                    'Ret 1 Mo (Mo-End)',
-                    'Ret 2 Mo (Mo-End)',
-                    'Ret 3 Mo (Mo-End)',
-                    'Ret 6 Mo (Mo-End)',
-                    'Ret 1 Yr (Mo-End)',
-                    'Ret Annlzd 2 Yr (Mo-End)',
-                    'Ret Annlzd 3 Yr (Mo-End)',
-                    'Ret Annlzd 5 Yr (Mo-End)',
-                    'Ret Annlzd 10 Yr (Mo-End)',
-                    'Ret Annlzd 15 Yr (Mo-End)'
+                    'Return Date',
+                    'Ret_0',
+                    'Ret_2',
+                    'Ret_1',
+                    'Ret_3',
+                    'Ret_4',
+                    'Ret_5',
+                    'Ret_6',
+                    'Ret_7',
+                    'Ret_8',
+                    'Ret_9',
                     ]
 
 df.columns = [presumed_headings]
 
-
-# In[12]:
-
-
-# clean the dataset
-
-# remove all rows without an ID
-df = df[df['SecId'].notnull()]
-df['str-date'] = df['Return Date (Mo-End)'].astype(str)
-
-# find modal return date, remove all rows without that return date
-mode_series = df['str-date']
-mode_list = list(mode_series.values)
-
-count_list = {}
-
-for x in mode_list:
-    prev = count_list.get(x, 0) + 1
-    count_list[x] = prev
-    
-max_val = max(count_list.values())
-
-for k, v in count_list.iteritems():
-    if v == max_val:
-        mode = k
-        break
-
-        df = df[df['str-date'] == mode]
-        
-del df['str-date']
+# clean the dataframe
+df = clean(df)
 
 # set the SecId as the index
 df = df.set_index('SecId')
 
-
-
-# In[13]:
-
 # retrieve all the categories in the data
 all_categories = df['Morningstar Category'].unique()
 
-
-# In[14]:
-
-# test_cat = 'Australia OE Australian Cash'
-# test_ret= 'Return Date (Mo-End)'
-
-# test_sample = df[df['Morningstar Category'] == test_cat]
-# # test_sample = df[df['Morningstar Category'] == test_cat, pd.notnull(df['test_ret'])]
-
-# print test_sample
-
-
-# In[20]:
-
 # cycle over all the return columns
-for column in list('EFGHIJKLMN'):
+for column in presumed_headings[4:]:
 
     # dictionary to hold the ids of the funds to investigate
     new_column_data = {}
     
-    colhead = headings[column]
-    print colhead
-    
-    count = len(all_categories)
-    print count
+    print column
+
+    print len(df[column].dropna())
     
     # cycle over all the categories in the dataset
     for category in all_categories:
         
-        count -= 1
-        
-        if not count % 25:
-            print count
-     
         # create a dataframe containing only the funds in the category, with non-NA data, 
         # grab only the current return column
-        returns = df[df['Morningstar Category'] == category][colhead].dropna()
-             
+        returns = df[df['Morningstar Category'] == category][column].dropna()
+           
         # if the dataset is too small, then abandon the analysis for this category over this time period
-        if len(returns) < 6:
+        if len(returns) < MIN_FUNDS:
             continue
 
         # calculate the median and the stdev for the returns
@@ -194,26 +193,23 @@ for column in list('EFGHIJKLMN'):
         high_slice.sort(axis=0, inplace=True, ascending=True )        
 
         # retrieve lists of the id's of the funds that need to be investigated for this return period
-        investigate_low  = investigate(low_slice,  stddev, colhead)  
-        investigate_high = investigate(high_slice, stddev, colhead)
+        investigate_low  = investigate(low_slice,  stddev, column)  
+        investigate_high = investigate(high_slice, stddev, column)
 
         # add the investigation funds for this category to return period investigation dictionary 
         new_column_data = dict(new_column_data.items() + [(x, 'L') for x in investigate_low] + [(y, 'H') for y in investigate_high])
       
     # create a new column that highlights with an "L" or an "H" which funds need to be investigated
-    df['INVESTIGATE '+colhead] = [new_column_data.get(x, '') for x in list(df.index.values)]
+    df['INV '+column] = [new_column_data.get(x, '') for x in list(df.index.values)]
 
     
 # export the results to excel
-folder, name = os.path.split(filename)
-now = datetime.datetime.now().strftime("%I%M%S")
-output_name = os.path.join(folder, 'results_' + now + '.xlsx')
-df.to_excel(output_name, sheet_name='Gap_Results')
+# folder, name = os.path.split(filename)
+# now = datetime.datetime.now().strftime("%I%M%S")
+# output_name = os.path.join(folder, 'results_' + now + '.xlsx')
 
-print 'done'    
+print 'Exporting to Excel'
 
+df.to_excel(output, sheet_name='Gap_Results')
 
-# In[ ]:
-
-
-
+print 'Analysis and Export Complete'    

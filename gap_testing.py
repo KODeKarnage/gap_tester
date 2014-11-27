@@ -1,8 +1,6 @@
 
 # coding: utf-8
 
-# In[9]:
-
 # Standard Modules
 import sys
 import pandas as pd
@@ -11,7 +9,10 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 
 def error_message():
-    print '--->::: gap_testing.exe [input file] [output file] [minimum] [gap_adj]'
+    print '--->:::'
+    print '--->::: Usage:        python gap_testing.py [input file*] [output file*] [minimum^] [gap_adj^]'
+    print '--->:::               * required '
+    print '--->:::               ^ optional '
     print '--->:::'
     print '--->::: input file:   the filename of the excel file to be tested.'
     print '--->:::               The file must be in the same folder as the script.'
@@ -21,16 +22,16 @@ def error_message():
     print '--->:::               col(4) - Return Date'
     print '--->:::               col(5-10) - Return Periods'
     print '--->:::'
-    print '--->::: output file: the filename of the excel file to be produced. Make sure the file is not open.'
-    print '--->:::              Example: test_results.xlsx'
+    print '--->::: output file:  the filename of the excel file to be produced. Make sure the file is not open.'
+    print '--->:::               Example: test_results.xlsx'
     print '--->:::'
-    print '--->::: minimum:     the minimum number of funds required in a category to run the test on that category.'
-    print '--->:::              default = 6'
+    print '--->::: minimum:      the minimum number of funds required in a category to run the test on that category.'
+    print '--->:::               default = 6'
     print '--->:::'
-    print '--->::: gap_adj:     the number of standard deviations consituting an investigatable gap.'
-    print '--->:::              default = 1.0'
+    print '--->::: gap_adj:      the number of standard deviations consituting an investigatable gap.'
+    print '--->:::               default = 1.0'
     print '--->:::'
-    print '--->::: Starting Analysis'
+
 
 def investigate(dataframe, gap, colhead):
     
@@ -67,6 +68,7 @@ def investigate(dataframe, gap, colhead):
 
     return investigate_list
 
+
 def clean(dataframe):
     # clean the dataset
 
@@ -91,7 +93,7 @@ def clean(dataframe):
             mode = k
             break
 
-            df = df[df['str-date'] == mode]
+    df = df[df['str-date'] == mode]
             
     del df['str-date']    
 
@@ -117,17 +119,21 @@ except:
 try:
     MIN_FUNDS = sys.argv[3]
 except:
+    print '--->::: minimum not supplied, using default minimum: 6'
     MIN_FUNDS = 6
     error=True
 
 try:
     CRITICAL_SD = sys.argv[4]
 except:
+    print '--->::: gap_adj not supplied, using default: 1.0'
     CRITICAL_SD = 1.0
     error=True
 
 if error:
     error_message()
+
+print '--->::: Starting Analysis'
 
 # open excel file and create the dataframe
 df = pd.read_excel(filename)
@@ -167,9 +173,9 @@ for column in presumed_headings[4:]:
     # dictionary to hold the ids of the funds to investigate
     new_column_data = {}
     
-    print column
+    print '--->::: Processing Column %s' % column
 
-    print len(df[column].dropna())
+    print '--->:::     %s returns in column' % len(df[column].dropna())
     
     # cycle over all the categories in the dataset
     for category in all_categories:
@@ -208,8 +214,8 @@ for column in presumed_headings[4:]:
 # now = datetime.datetime.now().strftime("%I%M%S")
 # output_name = os.path.join(folder, 'results_' + now + '.xlsx')
 
-print 'Exporting to Excel'
+print '--->::: Exporting to Excel'
 
 df.to_excel(output, sheet_name='Gap_Results')
 
-print 'Analysis and Export Complete'    
+print '--->::: Analysis and Export Complete! :::<---'    
